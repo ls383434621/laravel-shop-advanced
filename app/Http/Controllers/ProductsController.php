@@ -5,17 +5,19 @@ namespace App\Http\Controllers;
 use App\Exceptions\InvalidRequestException;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Category;
+use App\Services\CategoryService;
 use Illuminate\Http\Request;
 
 class ProductsController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request,CategoryService $categoryService)
     {
         // 创建一个查询构造器
         $builder = Product::query()->where('on_sale', true);
         // 判断是否有提交 search 参数，如果有就赋值给 $search 变量
         // search 参数用来模糊搜索商品
-        if ($search = $request->input('search', '')) {
+        if ($search = $request->input('search', '')){
             $like = '%'.$search.'%';
             // 模糊搜索商品标题、商品详情、SKU 标题、SKU描述
             $builder->where(function ($query) use ($like) {
@@ -27,7 +29,16 @@ class ProductsController extends Controller
                     });
             });
         }
-
+		if ($request->input('category_id') && $category = Category::find($request->input('category_id'))) {
+			if($category->is_directory){
+				$builder->whereHas('category', function ($query) use ($category) {
+                    // 这里的逻辑参考本章第一节
+                    $query->where('path', 'like', $category->path.$category->id.'-%');
+                });
+			}else{
+				$builder->where('category_id',$category->id);
+			}
+		}
         // 是否有提交 order 参数，如果有就赋值给 $order 变量
         // order 参数用来控制商品的排序规则
         if ($order = $request->input('order', '')) {
@@ -42,13 +53,15 @@ class ProductsController extends Controller
         }
 
         $products = $builder->paginate(16);
-
+			 
         return view('products.index', [
             'products' => $products,
-            'filters'  => [
+            'filters'  => [ 
                 'search' => $search,
                 'order'  => $order,
             ],
+			'category'  => $category ?? null,
+			 
         ]);
     }
 
