@@ -80,7 +80,23 @@
                             @else
                                 <button class="btn btn-success btn-favor">❤ 收藏</button>
                             @endif
-                            <button class="btn btn-primary btn-add-to-cart">加入购物车</button>
+                             <!-- 众筹商品下单按钮开始 -->
+							@if($product->type === \App\Models\Product::TYPE_CROWDFUNDING)
+								@if(Auth::check())
+								  @if($product->crowdfunding->status === \App\Models\CrowdfundingProduct::STATUS_FUNDING)
+									<button class="btn btn-primary btn-crowdfunding">参与众筹</button>
+								  @else
+									<button class="btn btn-primary disabled">
+									  {{ \App\Models\CrowdfundingProduct::$statusMap[$product->crowdfunding->status] }}
+									</button>
+								  @endif
+								@else
+								  <a class="btn btn-primary" href="{{ route('login') }}">请先登录</a>
+								@endif
+								@else
+								<button class="btn btn-primary btn-add-to-cart">加入购物车</button>
+							@endif
+							  <!-- 众筹商品下单按钮结束 -->
                         </div>
                     </div>
                 </div>

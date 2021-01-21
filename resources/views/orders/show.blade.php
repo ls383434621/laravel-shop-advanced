@@ -27,10 +27,10 @@
                                     </a>
                                 </div>
                                 <div>
-          <span class="product-title">
-             <a target="_blank" href="{{ route('products.show', [$item->product_id]) }}">{{ $item->product->title }}</a>
-          </span>
-                                    <span class="sku-title">{{ $item->productSku->title }}</span>
+								<span class="product-title">
+									<a target="_blank" href="{{ route('products.show', [$item->product_id]) }}">{{ $item->product->title }}</a>
+								</span>
+                                <span class="sku-title">{{ $item->productSku->title }}</span>
                                 </div>
                             </td>
                             <td class="sku-price text-center vertical-middle">￥{{ $item->price }}</td>
@@ -120,7 +120,9 @@
                             </div>
                         @endif
                         <!-- 订单已支付，且退款状态是未退款时展示申请退款按钮 -->
-                        @if($order->paid_at && $order->refund_status === \App\Models\Order::REFUND_STATUS_PENDING)
+                        @if($order->type !== \App\Models\Order::TYPE_CROWDFUNDING && 
+						$order->paid_at && 
+						$order->refund_status === \App\Models\Order::REFUND_STATUS_PENDING)
                             <div class="refund-button">
                                 <button class="btn btn-sm btn-danger" id="btn-apply-refund">申请退款</button>
                             </div>
