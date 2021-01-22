@@ -53,7 +53,7 @@ return [
     */
 
     'url' => env('APP_URL', 'http://localhost'),
-
+	
     'asset_url' => env('ASSET_URL', null),
 
     /*
@@ -230,5 +230,5 @@ return [
     ],
 
     'order_ttl' => 1800,
-
+	'ngrok_url' => env('NGROK_URL'),
 ];

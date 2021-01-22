@@ -120,10 +120,12 @@ class OrderService
             if ($sku->decreaseStock($amount) <= 0) {
                 throw new InvalidRequestException('该商品库存不足');
             }
-
+			if($sku->product->crowdfunding->end_at<Carbon::now()) {
+				  throw new InvalidRequestException('该商品已过期');
+			}
             return $order;
         });
-
+		 
         // 众筹结束时间减去当前时间得到剩余秒数
         $crowdfundingTtl = $sku->product->crowdfunding->end_at->getTimestamp() - time();
         // 剩余秒数与默认订单关闭时间取较小值作为订单关闭时间
