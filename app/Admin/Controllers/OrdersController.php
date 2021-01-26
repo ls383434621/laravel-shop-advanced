@@ -97,7 +97,7 @@ class OrdersController extends AdminController
         return redirect()->back();
     }
 
-    public function handleRefund(Order $order, HandleRefundRequest $request OrderService $orderService)
+    public function handleRefund(Order $order, HandleRefundRequest $request,OrderService $orderService)
     {
         // 判断订单状态是否正确
         if ($order->refund_status !== Order::REFUND_STATUS_APPLIED) {
