@@ -50,7 +50,6 @@ class AppServiceProvider extends ServiceProvider
                 // 配置日志，Elasticsearch 的请求和返回数据将打印到日志文件中，方便我们调试
                 $builder->setLogger(app('log')->driver());
             }
-
             return $builder->build();
         });
     }
