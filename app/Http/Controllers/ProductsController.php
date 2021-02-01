@@ -10,6 +10,7 @@ use App\Services\CategoryService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\SearchBuilders\ProductSearchBuilder;
+use App\Services\ProductService;
 
 class ProductsController extends Controller
 {	
@@ -17,7 +18,7 @@ class ProductsController extends Controller
     {
         $page    = $request->input('page', 1);
         $perPage = 16;
-		 $builder = (new ProductSearchBuilder())->onSale()->paginate($perPage, $page);
+		$builder = (new ProductSearchBuilder())->onSale()->paginate($perPage, $page);
         
 		if ($search = $request->input('search', '')) {
 			$keywords = array_filter(explode(' ', $search));
@@ -38,7 +39,7 @@ class ProductsController extends Controller
                 $propertyFilters[$name] = $value;
                 // 调用查询构造器的属性筛选
                 $builder->propertyFilter($name, $value);
-            }
+            } 
         }
         // 是否有提交 order 参数，如果有就赋值给 $order 变量
         // order 参数用来控制商品的排序规则
@@ -55,10 +56,7 @@ class ProductsController extends Controller
         // 通过 collect 函数将返回结果转为集合，并通过集合的 pluck 方法取到返回的商品 ID 数组
         $productIds = collect($result['hits']['hits'])->pluck('_id')->all();
         // 通过 whereIn 方法从数据库中读取商品数据
-        $products = Product::query()
-            ->whereIn('id', $productIds)
-			->orderByRaw(sprintf("FIND_IN_SET(id, '%s')", join(',', $productIds)))
-            ->get();
+        $products = Product::query()->byIds($productIds)->get();
         // 返回一个 LengthAwarePaginator 对象
         $pager = new LengthAwarePaginator($products, $result['hits']['total']['value'], $perPage, $page, [
             'path' => route('products.index', false), // 手动构建分页的 url
@@ -144,7 +142,7 @@ class ProductsController extends Controller
         ]);
     }
 
-    public function show(Product $product, Request $request)
+    public function show(Product $product, Request $request,ProductService $service)
     {
         if (!$product->on_sale) {
             throw new InvalidRequestException('商品未上架');
@@ -166,12 +164,32 @@ class ProductsController extends Controller
             ->limit(10) // 取出 10 条
             ->get();
 
+        // 创建一个查询构造器，只搜索上架的商品，取搜索结果的前 4 个商品
+        $builder = (new ProductSearchBuilder())->onSale()->paginate(4, 1);
+        // 遍历当前商品的属性
+        foreach ($product->properties as $property) {
+            // 添加到 should 条件中
+            $builder->propertyFilter($property->name, $property->value, 'should');
+        }
+        // 设置最少匹配一半属性
+        $builder->minShouldMatch(ceil(count($product->properties) / 2));
+        $params = $builder->getParams();
+        // 同时将当前商品的 ID 排除
+        $params['body']['query']['bool']['must_not'] = [['term' => ['_id' => $product->id]]];
+        // 搜索 similarProductIds 
+        $result = app('es')->search($params);
+        // 根据 Elasticsearch 搜索出来的商品 ID 从数据库中读取商品数据
+		//$similarProductIds = collect($result['hits']['hits'])->pluck('_id')->all();
+		$similarProductIds = $service->getSimilarProductIds($product, 4);
+		$similarProducts   = Product::query()->byIds($similarProductIds)->get();
         // 最后别忘了注入到模板中
         return view('products.show', [
             'product' => $product,
             'favored' => $favored,
-            'reviews' => $reviews
+            'reviews' => $reviews,
+            'similar' => $similarProducts,
         ]);
+		
     }
 
     public function favorites(Request $request)
